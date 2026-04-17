@@ -29,6 +29,8 @@
         default = self.nixosModules.caddy;
       };
 
+      kubernetesModules.default = import ./kubernetes/module.nix;
+
       apps.${system} = {
         load-image = {
           type = "app";
