@@ -1,5 +1,10 @@
 # Caddy Ingress
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Nix Flake](https://img.shields.io/badge/Nix-Flake-5277C3?logo=nixos&logoColor=white)](flake.nix)
+[![Built with Nix](https://img.shields.io/badge/Built%20with-Nix-5277C3?logo=nixos)](https://nixos.org)
+
+
 Custom Caddy build with security, rate-limiting, and caching modules,
 packaged for NixOS and containerized for Kubernetes ingress.
 
