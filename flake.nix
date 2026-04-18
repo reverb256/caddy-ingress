@@ -20,6 +20,7 @@
     {
       packages.${system} = {
         inherit caddy-with-modules caddy-ingress-image;
+        container = caddy-ingress-image;
         default = caddy-with-modules;
       };
 
@@ -55,6 +56,10 @@
           echo "  goreleaser     $(goreleaser version --short 2>/dev/null || echo 'ok')"
           echo "  caddy          $(caddy-with-modules version 2>/dev/null || echo 'available')"
         '';
+      };
+
+      checks.${system} = {
+        build = caddy-with-modules;
       };
     };
 }
