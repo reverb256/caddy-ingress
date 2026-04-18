@@ -39,5 +39,22 @@
           ''}/bin/load-caddy-image";
         };
       };
+
+      devShells.${system}.default = pkgs.mkShell {
+        packages = with pkgs; [
+          go
+          golangci-lint
+          goreleaser
+          caddy-with-modules
+        ];
+
+        shellHook = ''
+          echo "caddy-ingress dev shell"
+          echo "  go             $(go version | awk '{print $3}')"
+          echo "  golangci-lint  $(golangci-lint version --short 2>/dev/null)"
+          echo "  goreleaser     $(goreleaser version --short 2>/dev/null || echo 'ok')"
+          echo "  caddy          $(caddy-with-modules version 2>/dev/null || echo 'available')"
+        '';
+      };
     };
 }
