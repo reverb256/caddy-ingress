@@ -17,6 +17,8 @@
 #   - at least one other workflow run or check run exists (zero runs = refuse);
 #   - every other workflow run, check run and commit status is green, and
 #     every name in REQUIRED_CHECKS (leakguard included) exists and passed;
+#     cancelled / timed_out / startup_failure / action_required rows are
+#     pending, never a refusal;
 #   - it is mergeable and not behind its base. If it's behind, the gate runs a
 #     merge-style update-branch once and exits.
 # Any new head from someone other than the gate App drops `ready-to-merge`;
@@ -261,11 +263,14 @@ jobs:
           if [[ "$(jq length <<<"$OTHER")" -eq 0 && "$(jq length <<<"$LATEST")" -eq 0 ]]; then
             note "refusing: zero workflow runs and zero check runs on $SHA. A CI completion re-arms the gate."; exit 0
           fi
-          PENDING=$( { jq -r '.[] | select(.status != "completed") | "\(.name)=\(.status)"' <<<"$OTHER"
-                       jq -r '.[] | select(.status != "completed") | "\(.name)=\(.status)"' <<<"$LATEST"
+          # Cancelled / timed-out / startup-failure / action-required rows are
+          # pending, not failures: one cancelled row on the head SHA used to
+          # block every later green pass (audit 2026-11-27). No new concurrency.
+          PENDING=$( { jq -r '.[] | select(.status != "completed" or (.conclusion | IN("cancelled","timed_out","startup_failure","action_required"))) | "\(.name)=\(.status)/\(.conclusion // "-")"' <<<"$OTHER"
+                       jq -r '.[] | select(.status != "completed" or (.conclusion | IN("cancelled","timed_out","startup_failure","action_required"))) | "\(.name)=\(.status)/\(.conclusion // "-")"' <<<"$LATEST"
                        jq -r '.[] | select(.state == "pending") | .context' <<<"$STATUSES"; } | paste -sd' ' - || true)
-          FAILED=$( { jq -r '.[] | select(.status == "completed" and (.conclusion | IN("success","neutral","skipped") | not)) | "\(.name)=\(.conclusion)"' <<<"$OTHER"
-                      jq -r '.[] | select(.status == "completed" and (.conclusion | IN("success","neutral","skipped") | not)) | "\(.name)=\(.conclusion)"' <<<"$LATEST"
+          FAILED=$( { jq -r '.[] | select(.status == "completed" and (.conclusion | IN("success","neutral","skipped","cancelled","timed_out","startup_failure","action_required") | not)) | "\(.name)=\(.conclusion)"' <<<"$OTHER"
+                      jq -r '.[] | select(.status == "completed" and (.conclusion | IN("success","neutral","skipped","cancelled","timed_out","startup_failure","action_required") | not)) | "\(.name)=\(.conclusion)"' <<<"$LATEST"
                       jq -r '.[] | select(.state == "failure" or .state == "error") | "\(.context)=\(.state)"' <<<"$STATUSES"; } | paste -sd' ' - || true)
           [[ -z "$FAILED" ]] || refuse "#$PR at $SHA has failing checks: $FAILED"
           [[ -z "$PENDING" ]] || { note "#$PR still pending: $PENDING"; exit 0; }
